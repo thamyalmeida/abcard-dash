@@ -7,66 +7,56 @@ The password is read from the PAGE_PASSWORD environment variable (GitHub Secret)
 
 import os
 import shutil
-import hashlib
+import json
 
-PASSWORD = os.environ.get("PAGE_PASSWORD", "")
+PASSWORD = os.environ.get("PAGE_PASSWORD", "").strip()
 if not PASSWORD:
     raise SystemExit("❌ GitHub Secret PAGE_PASSWORD não está definido.")
 
-# Hash SHA-256 da senha para não expor em plaintext no HTML
-PASSWORD_HASH = hashlib.sha256(PASSWORD.encode()).hexdigest()
+# Escapa a senha para uso seguro dentro de JavaScript
+PASSWORD_JS = json.dumps(PASSWORD)
 
 FILES = ["index.html", "ptbr.html"]
 
 os.makedirs("protected", exist_ok=True)
 
-LOGIN_TEMPLATE = """
-<!DOCTYPE html>
+LOGIN_TEMPLATE = """<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Acesso Restrito</title>
-  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
 
     :root {{
       --nu-purple: #820AD1;
-      --nu-purple-dark: #5C0A94;
       --bg: #0D0D0D;
       --surface: #161616;
-      --border: rgba(130, 10, 209, 0.25);
+      --border: rgba(130, 10, 209, 0.30);
       --text: #F0E6FF;
-      --muted: #7A6A8A;
+      --muted: #9A8AAA;
       --error: #FF4D6D;
     }}
 
     body {{
-      font-family: 'Sora', sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      overflow: hidden;
     }}
 
-    /* Fundo animado */
     body::before {{
       content: '';
       position: fixed;
-      inset: -50%;
-      background: radial-gradient(ellipse at 60% 40%, rgba(130,10,209,0.15) 0%, transparent 60%),
-                  radial-gradient(ellipse at 20% 80%, rgba(92,10,148,0.1) 0%, transparent 50%);
-      animation: drift 12s ease-in-out infinite alternate;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 65% 35%, rgba(130,10,209,0.18) 0%, transparent 55%),
+        radial-gradient(ellipse at 20% 75%, rgba(92,10,148,0.12) 0%, transparent 50%);
       pointer-events: none;
-    }}
-
-    @keyframes drift {{
-      from {{ transform: translate(0, 0) rotate(0deg); }}
-      to   {{ transform: translate(3%, 2%) rotate(1deg); }}
     }}
 
     .card {{
@@ -74,49 +64,43 @@ LOGIN_TEMPLATE = """
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 20px;
-      padding: 48px 44px;
+      padding: 44px 40px;
       width: 100%;
-      max-width: 400px;
-      box-shadow: 0 0 60px rgba(130,10,209,0.1), 0 24px 48px rgba(0,0,0,0.4);
-      animation: fadeUp 0.5s ease both;
-    }}
-
-    @keyframes fadeUp {{
-      from {{ opacity: 0; transform: translateY(20px); }}
-      to   {{ opacity: 1; transform: translateY(0); }}
+      max-width: 380px;
+      margin: 20px;
     }}
 
     .logo {{
       display: flex;
       align-items: center;
       gap: 10px;
-      margin-bottom: 36px;
+      margin-bottom: 32px;
     }}
 
     .logo-icon {{
-      width: 36px;
-      height: 36px;
+      width: 34px;
+      height: 34px;
       background: var(--nu-purple);
-      border-radius: 10px;
+      border-radius: 9px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 18px;
-      font-weight: 600;
+      font-size: 14px;
+      font-weight: 700;
       color: white;
-      letter-spacing: -1px;
+      letter-spacing: -0.5px;
     }}
 
     .logo-text {{
-      font-size: 13px;
-      font-weight: 300;
+      font-size: 12px;
+      font-weight: 400;
       color: var(--muted);
-      letter-spacing: 0.08em;
+      letter-spacing: 0.1em;
       text-transform: uppercase;
     }}
 
     h1 {{
-      font-size: 22px;
+      font-size: 21px;
       font-weight: 600;
       margin-bottom: 6px;
       letter-spacing: -0.3px;
@@ -125,13 +109,8 @@ LOGIN_TEMPLATE = """
     .subtitle {{
       font-size: 13px;
       color: var(--muted);
-      margin-bottom: 32px;
-      line-height: 1.5;
-    }}
-
-    .field {{
-      position: relative;
-      margin-bottom: 20px;
+      margin-bottom: 28px;
+      line-height: 1.55;
     }}
 
     label {{
@@ -146,39 +125,37 @@ LOGIN_TEMPLATE = """
 
     input[type="password"] {{
       width: 100%;
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
       border-radius: 10px;
-      padding: 14px 16px;
-      font-family: 'Sora', sans-serif;
+      padding: 13px 15px;
+      font-family: inherit;
       font-size: 15px;
       color: var(--text);
       outline: none;
-      transition: border-color 0.2s, box-shadow 0.2s;
+      margin-bottom: 14px;
+      transition: border-color 0.2s;
     }}
 
     input[type="password"]:focus {{
       border-color: var(--nu-purple);
-      box-shadow: 0 0 0 3px rgba(130,10,209,0.15);
     }}
 
     .btn {{
       width: 100%;
-      padding: 15px;
+      padding: 14px;
       background: var(--nu-purple);
       border: none;
       border-radius: 10px;
       color: white;
-      font-family: 'Sora', sans-serif;
+      font-family: inherit;
       font-size: 15px;
       font-weight: 600;
       cursor: pointer;
-      transition: background 0.2s, transform 0.1s;
-      margin-top: 8px;
+      transition: background 0.15s;
     }}
 
-    .btn:hover  {{ background: #9B1AE8; }}
-    .btn:active {{ transform: scale(0.98); }}
+    .btn:hover {{ background: #9B1AE8; }}
 
     .error-msg {{
       display: none;
@@ -186,32 +163,17 @@ LOGIN_TEMPLATE = """
       font-size: 12px;
       margin-top: 12px;
       text-align: center;
-      animation: shake 0.3s ease;
-    }}
-
-    @keyframes shake {{
-      0%,100% {{ transform: translateX(0); }}
-      25%      {{ transform: translateX(-6px); }}
-      75%      {{ transform: translateX(6px); }}
     }}
 
     .error-msg.visible {{ display: block; }}
 
-    .badge {{
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
+    .footer {{
       font-size: 11px;
       color: var(--muted);
       margin-top: 28px;
       padding-top: 20px;
-      border-top: 1px solid rgba(255,255,255,0.05);
-      width: 100%;
-    }}
-
-    .badge::before {{
-      content: '🔒';
-      font-size: 12px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      text-align: center;
     }}
   </style>
 </head>
@@ -223,41 +185,31 @@ LOGIN_TEMPLATE = """
     </div>
 
     <h1>Bem-vinda 👋</h1>
-    <p class="subtitle">Este conteúdo é interno. Por favor, insira a senha para continuar.</p>
+    <p class="subtitle">Este conteúdo é interno. Insira a senha para continuar.</p>
 
-    <div class="field">
-      <label>Senha</label>
-      <input type="password" id="pwd" placeholder="••••••••" autofocus />
-    </div>
+    <label for="pwd">Senha</label>
+    <input type="password" id="pwd" placeholder="••••••••" autofocus />
 
     <button class="btn" onclick="checkPassword()">Entrar</button>
     <p class="error-msg" id="err">Senha incorreta. Tente novamente.</p>
 
-    <span class="badge">Conteúdo interno Nubank · não compartilhe este link</span>
+    <p class="footer">Conteúdo interno Nubank · não compartilhe este link</p>
   </div>
 
-  <div id="content" style="display:none; width:100%; height:100vh;"></div>
+  <div id="content" style="display:none;"></div>
 
   <script>
-    const HASH = "{PASSWORD_HASH}";
+    const CORRECT = {PASSWORD_JS};
     const CONTENT = {CONTENT_PLACEHOLDER};
 
-    // Verifica sessão existente
     (function () {{
-      const saved = sessionStorage.getItem("nu_auth");
-      if (saved === HASH) unlock();
+      if (sessionStorage.getItem("nu_auth") === "ok") unlock();
     }})();
 
-    async function sha256(str) {{
-      const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
-      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,"0")).join("");
-    }}
-
-    async function checkPassword() {{
+    function checkPassword() {{
       const val = document.getElementById("pwd").value;
-      const h = await sha256(val);
-      if (h === HASH) {{
-        sessionStorage.setItem("nu_auth", HASH);
+      if (val === CORRECT) {{
+        sessionStorage.setItem("nu_auth", "ok");
         unlock();
       }} else {{
         const err = document.getElementById("err");
@@ -266,21 +218,20 @@ LOGIN_TEMPLATE = """
       }}
     }}
 
-    document.getElementById("pwd").addEventListener("keydown", e => {{
+    document.getElementById("pwd").addEventListener("keydown", function(e) {{
       if (e.key === "Enter") checkPassword();
     }});
 
     function unlock() {{
       document.querySelector(".card").style.display = "none";
-      document.body.style.background = "white";
+      document.body.style.background = "transparent";
       const div = document.getElementById("content");
       div.style.display = "block";
       div.innerHTML = CONTENT;
-      // Re-executa scripts do conteúdo original
-      div.querySelectorAll("script").forEach(old => {{
+      div.querySelectorAll("script").forEach(function(old) {{
         const s = document.createElement("script");
-        if (old.src) s.src = old.src;
-        else s.textContent = old.textContent;
+        if (old.src) {{ s.src = old.src; }}
+        else {{ s.textContent = old.textContent; }}
         document.head.appendChild(s);
       }});
     }}
@@ -297,11 +248,9 @@ def inject(filename):
     with open(filename, "r", encoding="utf-8") as f:
         original = f.read()
 
-    # Escapa o conteúdo original para JSON string segura
-    import json
     content_json = json.dumps(original)
 
-    protected = LOGIN_TEMPLATE.replace("{PASSWORD_HASH}", PASSWORD_HASH)
+    protected = LOGIN_TEMPLATE.replace("{PASSWORD_JS}", PASSWORD_JS)
     protected = protected.replace("{CONTENT_PLACEHOLDER}", content_json)
 
     out_path = os.path.join("protected", filename)
